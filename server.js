@@ -175,7 +175,6 @@ app.post('/create-daily-token', async (req, res) => {
           enable_screenshare: false,
           enable_chat: false
         },
-        expiration: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour expiration
       },
       {
         headers: {
