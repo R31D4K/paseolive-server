@@ -5,7 +5,20 @@ const axios = require('axios');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Increase JSON payload limit and handle errors better
+app.use(express.json({ limit: '10mb', strict: false }));
+// Error handler for JSON parsing
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('JSON parsing error:', err.message);
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid JSON format',
+      details: err.message 
+    });
+  }
+  next();
+});
 
 // Daily.co API configuration
 const DAILY_API_KEY = '6056715a3a6e6fecb6eba6b2843f7dfad299f48fa70cd1f635d62a159a094129';
