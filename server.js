@@ -203,6 +203,46 @@ app.post('/create-daily-room', async (req, res) => {
     }
 });
 
+// Delete Daily.co room
+app.post('/delete-daily-room', async (req, res) => {
+  const { roomName } = req.body;
+  
+  if (!roomName) {
+    return res.status(400).json({ success: false, error: 'Room name is required' });
+  }
+
+  // Sanitize room name
+  const sanitizedRoomName = roomName.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50);
+
+  console.log('Deleting Daily room:', sanitizedRoomName);
+  
+  try {
+    const response = await axios.delete(
+      `${DAILY_API_URL}/rooms/${sanitizedRoomName}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${DAILY_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Daily room deleted:', sanitizedRoomName);
+    res.json({ success: true, message: 'Room deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting Daily room:', error.response?.data || error.message);
+    // If room doesn't exist, that's okay - consider it success
+    if (error.response?.status === 404) {
+      res.json({ success: true, message: 'Room not found (already deleted)' });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        error: error.response?.data?.error || error.message || 'Failed to delete room'
+      });
+    }
+  }
+});
+
 // Create Daily.co token for a room
 app.post('/create-daily-token', async (req, res) => {
   const { roomName, userName, isOwner } = req.body;
