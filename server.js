@@ -105,12 +105,17 @@ app.post('/create-daily-room', async (req, res) => {
   if (!roomName) {
     return res.status(400).json({ success: false, error: 'Room name is required' });
   }
+
+  // Sanitize room name - Daily.co requires lowercase alphanumeric and hyphens only
+    const sanitizedRoomName = roomName.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50);
+
+    console.log('Creating Daily room with name:', sanitizedRoomName);
   
   try {
     const response = await axios.post(
       `${DAILY_API_URL}/rooms`,
       {
-        name: roomName,
+        name: sanitizedRoomName,
         privacy: 'private',
         properties: {
           enable_screenshare: false,
@@ -128,14 +133,22 @@ app.post('/create-daily-room', async (req, res) => {
     );
     
     console.log('Daily room created:', response.data);
-    res.json({ success: true, room: response.data });
+    // Return the sanitized room name so the client can use it for token creation
+        res.json({
+          success: true,
+          room: response.data,
+          sanitizedRoomName: sanitizedRoomName
+        });
   } catch (error) {
-    console.error('Error creating Daily room:', error.response?.data || error.message);
-    res.status(500).json({ 
-      success: false, 
-      error: error.response?.data?.error || error.message 
-    });
-  }
+      console.error('Error creating Daily room:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.error || error.response?.data?.info || error.message;
+      const statusCode = error.response?.status || 500;
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+        details: error.response?.data || null
+      });
+    }
 });
 
 // Create Daily.co token for a room
@@ -145,14 +158,19 @@ app.post('/create-daily-token', async (req, res) => {
   if (!roomName) {
     return res.status(400).json({ success: false, error: 'Room name is required' });
   }
-  
-  try {
+   // Sanitize room name to match the one used when creating the room
+    const sanitizedRoomName = roomName.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50);
+    const sanitizedUserName = (userName || (isOwner ? 'Owner' : 'Walker')).substring(0, 50);
+
+    console.log('Creating Daily token for room:', sanitizedRoomName, 'user:', sanitizedUserName);
+
+    try {
     const response = await axios.post(
       `${DAILY_API_URL}/meeting-tokens`,
       {
         properties: {
-          room_name: roomName,
-          user_name: userName || (isOwner ? 'Owner' : 'Walker'),
+          room_name: sanitizedRoomName,
+          user_name: sanitizedUserName || (isOwner ? 'Owner' : 'Walker'),
           is_owner: isOwner || false,
           enable_screenshare: false,
           enable_chat: false
@@ -170,12 +188,15 @@ app.post('/create-daily-token', async (req, res) => {
     console.log('Daily token created:', response.data);
     res.json({ success: true, token: response.data.token });
   } catch (error) {
-    console.error('Error creating Daily token:', error.response?.data || error.message);
-    res.status(500).json({ 
-      success: false, 
-      error: error.response?.data?.error || error.message 
-    });
-  }
+      console.error('Error creating Daily token:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.error || error.response?.data?.info || error.message;
+      const statusCode = error.response?.status || 500;
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+        details: error.response?.data || null
+      });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
