@@ -222,11 +222,9 @@ app.post('/create-daily-token', async (req, res) => {
       {
         properties: {
           room_name: sanitizedRoomName,
-          user_name: sanitizedUserName,
-          enable_screenshare: false,
-          enable_chat: false
+          user_name: sanitizedUserName
         }
-        // Note: expiration and is_owner are not supported in Daily.co meeting tokens API
+        // Note: enable_screenshare, enable_chat, expiration, and is_owner are not supported in Daily.co meeting tokens API
         // Tokens expire based on Daily.co's default settings
       },
       {
