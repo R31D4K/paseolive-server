@@ -171,9 +171,19 @@ app.post('/create-daily-room', async (req, res) => {
             }
           );
           console.log('Retrieved existing Daily room:', getResponse.data);
+          // Ensure the response has the same structure as when creating a new room
+          const roomData = getResponse.data;
           res.json({ 
             success: true, 
-            room: getResponse.data,
+            room: {
+              id: roomData.id,
+              name: roomData.name,
+              url: roomData.url || `https://${roomData.config?.domain || 'paseolive'}.daily.co/${roomData.name}`,
+              api_created: roomData.api_created,
+              privacy: roomData.privacy,
+              created_at: roomData.created_at,
+              config: roomData.config
+            },
             sanitizedRoomName: sanitizedRoomName
           });
           return;
