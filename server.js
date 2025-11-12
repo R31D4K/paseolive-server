@@ -141,7 +141,36 @@ app.post('/create-daily-room', async (req, res) => {
         });
   } catch (error) {
       console.error('Error creating Daily room:', error.response?.data || error.message);
-      const errorMessage = error.response?.data?.error || error.response?.data?.info || error.message;
+      const errorData = error.response?.data || {};
+      const errorInfo = errorData.info || errorData.error || error.message;
+      
+      // If room already exists, try to get it instead
+      if (errorInfo && errorInfo.includes('already exists')) {
+        console.log('Room already exists, attempting to get existing room:', sanitizedRoomName);
+        try {
+          const getResponse = await axios.get(
+            `${DAILY_API_URL}/rooms/${sanitizedRoomName}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${DAILY_API_KEY}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          console.log('Retrieved existing Daily room:', getResponse.data);
+          res.json({ 
+            success: true, 
+            room: getResponse.data,
+            sanitizedRoomName: sanitizedRoomName
+          });
+          return;
+        } catch (getError) {
+          console.error('Error getting existing room:', getError.response?.data || getError.message);
+          // Fall through to return error
+        }
+      }
+      
+      const errorMessage = errorInfo || error.message;
       const statusCode = error.response?.status || 500;
       res.status(statusCode).json({
         success: false,
@@ -170,11 +199,12 @@ app.post('/create-daily-token', async (req, res) => {
       {
         properties: {
           room_name: sanitizedRoomName,
-          user_name: sanitizedUserName || (isOwner ? 'Owner' : 'Walker'),
-          is_owner: isOwner || false,
+          user_name: sanitizedUserName,
           enable_screenshare: false,
           enable_chat: false
-        },
+        }
+        // Note: expiration and is_owner are not supported in Daily.co meeting tokens API
+        // Tokens expire based on Daily.co's default settings
       },
       {
         headers: {
